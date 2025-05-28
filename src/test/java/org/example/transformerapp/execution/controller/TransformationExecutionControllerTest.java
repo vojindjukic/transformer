@@ -176,4 +176,28 @@ class TransformationExecutionControllerTest {
         assertTrue(executions.stream().anyMatch(execution -> execution.getInput().equals("HELLO WORLD") && execution.getOutput().equals("hello world")));
     }
 
+    @Test
+    void testExceedingMaxTransformers() {
+        StringBuilder transformers = new StringBuilder("[");
+        transformers.append(("{" +
+                "\"operation\": \"TO_UPPERCASE\", \"parameters\": {}" +
+                "},").repeat(11));
+        transformers.deleteCharAt(transformers.length() - 1).append("]");
+
+        String requestBody = """
+            {
+                "data": "hello world",
+                "transformers":\s""" + transformers + """
+            }
+        """;
+
+        HttpEntity<String> request = new HttpEntity<>(requestBody, headers);
+
+        ResponseEntity<String> response = restTemplate.postForEntity("/transformations/submit", request, String.class);
+
+        assertNotNull(response);
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertTrue(response.getBody().contains("Number of transformers exceeds the maximum allowed"));
+    }
 }

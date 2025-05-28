@@ -3,6 +3,7 @@ package org.example.transformerapp.execution.service;
 import org.example.transformerapp.execution.dao.TransformationExecutionRepository;
 import org.example.transformerapp.execution.model.TransformationExecution;
 import org.example.transformerapp.transformer.Transformer;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -16,6 +17,9 @@ public class TransformationExecutionService {
     public record TransformationExecutionRequest(String data, List<Transformer> transformers) {}
 
     private final TransformationExecutionRepository transformationRepository;
+
+    @Value("${maxNumOfTransformersPerExecution:10}")
+    private int maxNumOfTransformers;
 
     public TransformationExecutionService(TransformationExecutionRepository transformationRepository) {
         this.transformationRepository = transformationRepository;
@@ -73,13 +77,17 @@ public class TransformationExecutionService {
         );
     }
 
-    private static void validateTransformationRequest(TransformationExecutionRequest request) {
+    private void validateTransformationRequest(TransformationExecutionRequest request) {
         if (isEmpty(request.data())) {
             throw new IllegalArgumentException("Input data cannot be empty");
         }
 
         if (isEmpty(request.transformers())) {
             throw new IllegalArgumentException("Transformers cannot be empty");
+        }
+
+        if (request.transformers().size() > maxNumOfTransformers) {
+            throw new IllegalArgumentException("Number of transformers exceeds the maximum allowed: " + maxNumOfTransformers);
         }
     }
 }
