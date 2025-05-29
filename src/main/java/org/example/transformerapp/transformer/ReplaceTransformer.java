@@ -1,5 +1,7 @@
 package org.example.transformerapp.transformer;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
 import static org.springframework.util.ObjectUtils.isEmpty;
@@ -26,7 +28,9 @@ public class ReplaceTransformer implements Transformer {
     @Override
     public String transform(String input) {
         try {
-            return input.replaceAll(regex, replacement);
+            Pattern pattern = Pattern.compile(regex);
+            Matcher matcher = pattern.matcher(new InterruptibleCharSequence(input));
+            return matcher.replaceAll( replacement);
         } catch (PatternSyntaxException e) {
             throw new IllegalArgumentException("Invalid regex pattern: " + regex, e);
         }

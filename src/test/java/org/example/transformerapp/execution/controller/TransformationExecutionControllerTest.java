@@ -2,6 +2,7 @@ package org.example.transformerapp.execution.controller;
 
 import org.example.transformerapp.execution.dao.TransformationExecutionRepository;
 import org.example.transformerapp.execution.model.TransformationExecution;
+import org.example.transformerapp.execution.model.TransformationStep;
 import org.example.transformerapp.transformer.Transformer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -13,8 +14,9 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.test.context.TestPropertySource;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
 
@@ -23,6 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@TestPropertySource(properties = {"transformation.timeout.millis=100"})
 class TransformationExecutionControllerTest {
 
     private static final HttpHeaders headers = new HttpHeaders();
@@ -98,20 +101,33 @@ class TransformationExecutionControllerTest {
 
         assertNotNull(response);
         assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
         assertTrue(response.getBody().contains("hello everyone"));
     }
 
     @Test
     void testGetExecutions() {
-        LocalDate today = LocalDate.now();
-        LocalDate from = today.minusDays(1);
-        LocalDate to = today;
-        String url = String.format("/transformations/executions?from=%s&to=%s", from, to);
+        var execution = new TransformationExecution(
+                null,
+                "hell0 world",
+                "HELLo WORLD",
+                List.of(new TransformationStep(Transformer.Operation.TO_UPPERCASE, "{}"),
+                        new TransformationStep(Transformer.Operation.REPLACE, "{\"regex\":\"0\",\"replacement\":\"o\"}")),
+                LocalDateTime.now().minusDays(1),
+                500L
+        );
+        repository.save(execution);
+
+        LocalDateTime today = LocalDateTime.now();
+        LocalDateTime from = today.minusDays(2);
+        String url = String.format("/transformations/executions?from=%s&to=%s", from, today);
 
         ResponseEntity<String> response = restTemplate.getForEntity(url, String.class);
 
         assertNotNull(response);
         assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertTrue(response.getBody().contains("hell0 world"));
     }
 
     @Test
@@ -185,11 +201,11 @@ class TransformationExecutionControllerTest {
         transformers.deleteCharAt(transformers.length() - 1).append("]");
 
         String requestBody = """
-            {
-                "data": "hello world",
-                "transformers":\s""" + transformers + """
-            }
-        """;
+                {
+                    "data": "hello world",
+                    "transformers":\s""" + transformers + """
+                    }
+                """;
 
         HttpEntity<String> request = new HttpEntity<>(requestBody, headers);
 
@@ -199,5 +215,64 @@ class TransformationExecutionControllerTest {
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         assertNotNull(response.getBody());
         assertTrue(response.getBody().contains("Number of transformers exceeds the maximum allowed"));
+    }
+
+    @Test
+    void testSubmitWithRegexTimeout() {
+        // Regex designed to cause catastrophic backtracking
+        String vulnerableRegex = "^(a+)+X$";
+        String longInput = "a".repeat(10000) + "b";
+
+        String requestBody = String.format("""
+                    {
+                        "data": "%s",
+                        "transformers": [
+                            {
+                                "operation": "REPLACE",
+                                "parameters": {
+                                    "regex": "%s",
+                                    "replacement": "TOO_LONG"
+                                }
+                            }
+                        ]
+                    }
+                """, longInput, vulnerableRegex);
+
+        HttpEntity<String> request = new HttpEntity<>(requestBody, headers);
+
+        ResponseEntity<String> response = restTemplate.postForEntity("/transformations/submit", request, String.class);
+
+        System.out.println("Response: " + response.getBody());
+
+        assertNotNull(response);
+        assertEquals(HttpStatus.REQUEST_TIMEOUT, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertTrue(response.getBody().contains("Transformation exceeded the maximum allowed time"));
+    }
+
+    @Test
+    void testSubmitWithInputExceedingMaxLength() {
+        String longInput = "a".repeat(10001);
+
+        String requestBody = String.format("""
+                    {
+                        "data": "%s",
+                        "transformers": [
+                            {
+                                "operation": "TO_UPPERCASE",
+                                "parameters": {}
+                            }
+                        ]
+                    }
+                """, longInput);
+
+        HttpEntity<String> request = new HttpEntity<>(requestBody, headers);
+
+        ResponseEntity<String> response = restTemplate.postForEntity("/transformations/submit", request, String.class);
+
+        assertNotNull(response);
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertTrue(response.getBody().contains("Input data exceeds the maximum allowed length"));
     }
 }

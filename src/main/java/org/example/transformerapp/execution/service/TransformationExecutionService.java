@@ -8,6 +8,10 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import static org.springframework.util.ObjectUtils.isEmpty;
 
@@ -18,11 +22,20 @@ public class TransformationExecutionService {
 
     private final TransformationExecutionRepository transformationRepository;
 
-    @Value("${maxNumOfTransformersPerExecution:10}")
+    private final ExecutorService regexThreadPool;
+
+    @Value("${transformation.maxNumOfTransformers:10}")
     private int maxNumOfTransformers;
 
-    public TransformationExecutionService(TransformationExecutionRepository transformationRepository) {
+    @Value("${transformation.maxInputLengthChars:10000}")
+    private int maxInputLengthChars;
+
+    @Value("${transformation.timeout.millis:3000}")
+    private long regexTimeoutMillis;
+
+    public TransformationExecutionService(TransformationExecutionRepository transformationRepository, ExecutorService regexThreadPool) {
         this.transformationRepository = transformationRepository;
+        this.regexThreadPool = regexThreadPool;
     }
 
     public List<TransformationExecution> getTransformations(LocalDateTime from, LocalDateTime to) {
@@ -50,7 +63,18 @@ public class TransformationExecutionService {
 
         validateTransformationRequest(request);
 
-        TransformationExecution transformationExecution = process(request);
+        var transformationExecutionFuture = regexThreadPool.submit(() -> process(request));
+
+        TransformationExecution transformationExecution;
+        try {
+            transformationExecution = transformationExecutionFuture.get(regexTimeoutMillis, TimeUnit.MILLISECONDS);
+        } catch (TimeoutException e) {
+            transformationExecutionFuture.cancel(true);
+            throw new TransformationExecutionException("Transformation execution exceeded time limit: " + e.getMessage(), e);
+        } catch (InterruptedException | ExecutionException e) {
+            Thread.currentThread().interrupt();
+            throw new TransformationExecutionException("Transformation execution failed: " + e.getMessage(), e);
+        }
 
         return transformationRepository.save(transformationExecution);
     }
@@ -59,9 +83,10 @@ public class TransformationExecutionService {
 
         long startTime = System.nanoTime();
 
-        String transformedData = request.data();
+        String currentTransformedData = request.data();
+
         for (Transformer transformer : request.transformers()) {
-            transformedData = transformer.transform(transformedData);
+            currentTransformedData = transformer.transform(currentTransformedData);
         }
 
         long endTime = System.nanoTime();
@@ -70,7 +95,7 @@ public class TransformationExecutionService {
         return new TransformationExecution(
                 null,
                 request.data(),
-                transformedData,
+                currentTransformedData,
                 request.transformers().stream().map(Transformer::toTransformationStep).toList(),
                 LocalDateTime.now(),
                 executionTime
@@ -84,6 +109,10 @@ public class TransformationExecutionService {
 
         if (isEmpty(request.transformers())) {
             throw new IllegalArgumentException("Transformers cannot be empty");
+        }
+
+        if (request.data().length() > maxInputLengthChars) {
+            throw new IllegalArgumentException("Input data exceeds the maximum allowed length: " + maxInputLengthChars);
         }
 
         if (request.transformers().size() > maxNumOfTransformers) {

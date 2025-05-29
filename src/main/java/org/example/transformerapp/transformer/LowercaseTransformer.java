@@ -4,7 +4,7 @@ public class LowercaseTransformer implements Transformer {
 
     @Override
     public String transform(String input) {
-        return input.toLowerCase();
+        return input.toString().toLowerCase();
     }
 
     @Override
