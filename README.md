@@ -21,7 +21,7 @@ A Spring Boot application for performing configurable text transformations throu
 
 ```bash
 # Clone the repository
-git clone [YOUR_REPOSITORY_URL_HERE]
+git clone https://github.com/vojindjukic/transformer
 cd transformer-app
 
 # Build the application
