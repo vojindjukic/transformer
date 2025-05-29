@@ -3,8 +3,7 @@ package org.example.transformerapp.reports;
 import org.example.transformerapp.execution.dao.TransformationExecutionRepository;
 import org.example.transformerapp.execution.model.TransformationExecution;
 import org.example.transformerapp.execution.model.TransformationStep;
-import org.example.transformerapp.transformer.Transformer;
-import org.example.transformerapp.transformer.Transformer.Operation;
+import org.example.transformerapp.transformer.Operation;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,7 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-class ReportControllerTest {
+class TransformationReportControllerTest {
 
     @Autowired
     private TestRestTemplate restTemplate;
@@ -40,8 +39,8 @@ class ReportControllerTest {
                 null,
                 "hell0 world",
                 "HELLo WORLD",
-                List.of(new TransformationStep(Transformer.Operation.TO_UPPERCASE, "{}"),
-                        new TransformationStep(Transformer.Operation.REPLACE, "{\"regex\":\"0\",\"replacement\":\"o\"}")),
+                List.of(new TransformationStep(Operation.TO_UPPERCASE, "{}"),
+                        new TransformationStep(Operation.REPLACE, "{\"regex\":\"0\",\"replacement\":\"o\"}")),
                 LocalDateTime.now().minusDays(1),
                 500L
         );
@@ -91,9 +90,9 @@ class ReportControllerTest {
         assertNotNull(response.getBody());
         assertTrue(response.getBody().length > 0);
         String reportContent = new String(response.getBody());
-        assertTrue(reportContent.contains("TO_UPPERCASE: 1"));
-        assertTrue(reportContent.contains("REPLACE: 2"));
-        assertTrue(reportContent.contains("TO_LOWERCASE: 1"));
+        assertTrue(reportContent.contains("Operation: TO_UPPERCASE, Count: 1"));
+        assertTrue(reportContent.contains("Operation: REPLACE, Count: 2"));
+        assertTrue(reportContent.contains("Operation: TO_LOWERCASE, Count: 1"));
     }
 
     @Test

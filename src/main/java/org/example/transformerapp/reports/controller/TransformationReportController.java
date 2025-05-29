@@ -1,6 +1,6 @@
 package org.example.transformerapp.reports.controller;
 
-import org.example.transformerapp.reports.service.ReportService;
+import org.example.transformerapp.reports.service.TransformationReportService;
 import org.example.transformerapp.reports.service.ReportType;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
@@ -15,12 +15,12 @@ import java.time.LocalDateTime;
 
 @RestController
 @RequestMapping("/transformations")
-public class ReportController {
+public class TransformationReportController {
 
-    private final ReportService reportService;
+    private final TransformationReportService transformationReportService;
 
-    public ReportController(ReportService reportService) {
-        this.reportService = reportService;
+    public TransformationReportController(TransformationReportService transformationReportService) {
+        this.transformationReportService = transformationReportService;
     }
 
     @GetMapping("/reports")
@@ -32,7 +32,7 @@ public class ReportController {
         LocalDateTime fromDateTime = from.atStartOfDay();
         LocalDateTime toDateTime = to.atTime(23, 59, 59);
 
-        String report = reportService.generateReport(fromDateTime, toDateTime, format);
+        String report = transformationReportService.generateReport(fromDateTime, toDateTime, format);
 
         HttpHeaders headers = new HttpHeaders();
         headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=transformation_report." + format.getExtension());

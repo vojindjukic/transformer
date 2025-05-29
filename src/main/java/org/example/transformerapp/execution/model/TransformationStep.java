@@ -1,7 +1,7 @@
 package org.example.transformerapp.execution.model;
 
 import jakarta.persistence.Embeddable;
-import org.example.transformerapp.transformer.Transformer.Operation;
+import org.example.transformerapp.transformer.Operation;
 
 @Embeddable
 public class TransformationStep {

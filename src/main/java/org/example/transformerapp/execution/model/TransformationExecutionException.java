@@ -1,4 +1,4 @@
-package org.example.transformerapp.execution.service;
+package org.example.transformerapp.execution.model;
 
 public class TransformationExecutionException extends RuntimeException {
 

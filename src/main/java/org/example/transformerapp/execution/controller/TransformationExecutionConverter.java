@@ -6,6 +6,7 @@ import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import org.example.transformerapp.execution.service.TransformationExecutionService.TransformationExecutionRequest;
 import org.example.transformerapp.transformer.LowercaseTransformer;
+import org.example.transformerapp.transformer.Operation;
 import org.example.transformerapp.transformer.RemoveTransformer;
 import org.example.transformerapp.transformer.ReplaceTransformer;
 import org.example.transformerapp.transformer.Transformer;
@@ -22,13 +23,13 @@ public class TransformationExecutionConverter {
             @NotNull @JsonProperty("data") String data,
             @NotEmpty @JsonProperty("transformers") List<TransformerDTO> transformers) {}
 
-    public record TransformerDTO(Transformer.Operation operation, Map<String, String> parameters) {}
+    public record TransformerDTO(Operation operation, Map<String, String> parameters) {}
 
     public TransformationExecutionRequest convertToInternalRequest(TransformationExecutionRequestDTO request) {
 
         List<Transformer> transformers = request.transformers().stream()
                 .map(transformerRequest -> {
-                    Transformer.Operation operation = transformerRequest.operation();
+                    Operation operation = transformerRequest.operation();
                     Map<String, String> parameters = transformerRequest.parameters();
                     return createTransformer(operation, parameters);
                 })
@@ -38,8 +39,7 @@ public class TransformationExecutionConverter {
 
     }
 
-
-    private Transformer createTransformer(Transformer.Operation operation, Map<String, String> parameters) {
+    private Transformer createTransformer(Operation operation, Map<String, String> parameters) {
         return switch (operation) {
             case REMOVE:
                 String regex = parameters.get("regex");
@@ -53,6 +53,5 @@ public class TransformationExecutionConverter {
             case TO_LOWERCASE:
                 yield new LowercaseTransformer();
         };
-
     }
 }

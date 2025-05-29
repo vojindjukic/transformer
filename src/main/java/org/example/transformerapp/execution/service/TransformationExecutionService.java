@@ -2,6 +2,7 @@ package org.example.transformerapp.execution.service;
 
 import org.example.transformerapp.execution.dao.TransformationExecutionRepository;
 import org.example.transformerapp.execution.model.TransformationExecution;
+import org.example.transformerapp.execution.model.TransformationExecutionException;
 import org.example.transformerapp.transformer.Transformer;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -27,11 +28,11 @@ public class TransformationExecutionService {
     @Value("${transformation.maxNumOfTransformers:10}")
     private int maxNumOfTransformers;
 
-    @Value("${transformation.maxInputLengthChars:10000}")
+    @Value("${transformation.maxInputLengthChars:15000}")
     private int maxInputLengthChars;
 
     @Value("${transformation.timeout.millis:3000}")
-    private long regexTimeoutMillis;
+    private long transformationTimeoutMillis;
 
     public TransformationExecutionService(TransformationExecutionRepository transformationRepository, ExecutorService regexThreadPool) {
         this.transformationRepository = transformationRepository;
@@ -67,7 +68,7 @@ public class TransformationExecutionService {
 
         TransformationExecution transformationExecution;
         try {
-            transformationExecution = transformationExecutionFuture.get(regexTimeoutMillis, TimeUnit.MILLISECONDS);
+            transformationExecution = transformationExecutionFuture.get(transformationTimeoutMillis, TimeUnit.MILLISECONDS);
         } catch (TimeoutException e) {
             transformationExecutionFuture.cancel(true);
             throw new TransformationExecutionException("Transformation execution exceeded time limit: " + e.getMessage(), e);

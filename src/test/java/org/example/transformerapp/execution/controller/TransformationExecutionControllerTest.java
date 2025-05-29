@@ -3,7 +3,7 @@ package org.example.transformerapp.execution.controller;
 import org.example.transformerapp.execution.dao.TransformationExecutionRepository;
 import org.example.transformerapp.execution.model.TransformationExecution;
 import org.example.transformerapp.execution.model.TransformationStep;
-import org.example.transformerapp.transformer.Transformer;
+import org.example.transformerapp.transformer.Operation;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -111,8 +111,8 @@ class TransformationExecutionControllerTest {
                 null,
                 "hell0 world",
                 "HELLo WORLD",
-                List.of(new TransformationStep(Transformer.Operation.TO_UPPERCASE, "{}"),
-                        new TransformationStep(Transformer.Operation.REPLACE, "{\"regex\":\"0\",\"replacement\":\"o\"}")),
+                List.of(new TransformationStep(Operation.TO_UPPERCASE, "{}"),
+                        new TransformationStep(Operation.REPLACE, "{\"regex\":\"0\",\"replacement\":\"o\"}")),
                 LocalDateTime.now().minusDays(1),
                 500L
         );
@@ -175,12 +175,12 @@ class TransformationExecutionControllerTest {
                 new TransformationExecutionConverter.TransformationExecutionRequestDTO(
                         "hello world",
                         List.of(new TransformationExecutionConverter.TransformerDTO(
-                                Transformer.Operation.TO_UPPERCASE, null)));
+                                Operation.TO_UPPERCASE, null)));
         var request2 =
                 new TransformationExecutionConverter.TransformationExecutionRequestDTO(
                         "HELLO WORLD",
                         List.of(new TransformationExecutionConverter.TransformerDTO(
-                                Transformer.Operation.TO_LOWERCASE, null)));
+                                Operation.TO_LOWERCASE, null)));
 
         controller.submitForTransformation(request1);
         controller.submitForTransformation(request2);
@@ -252,7 +252,7 @@ class TransformationExecutionControllerTest {
 
     @Test
     void testSubmitWithInputExceedingMaxLength() {
-        String longInput = "a".repeat(10001);
+        String longInput = "a".repeat(15001);
 
         String requestBody = String.format("""
                     {

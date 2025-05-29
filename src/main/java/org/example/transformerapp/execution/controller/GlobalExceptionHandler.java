@@ -1,6 +1,6 @@
 package org.example.transformerapp.execution.controller;
 
-import org.example.transformerapp.execution.service.TransformationExecutionException;
+import org.example.transformerapp.execution.model.TransformationExecutionException;
 import org.example.transformerapp.transformer.RegexOperationInterruptedException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
